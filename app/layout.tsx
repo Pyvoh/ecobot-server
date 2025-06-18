@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'ECOBOT',
+  description: 'EcoBot Dashboard - Real-time monitoring of your smart bottle collection system',
+  generator: 'Samwell.dev',
 }
 
 export default function RootLayout({
