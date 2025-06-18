@@ -90,6 +90,13 @@ export const api = {
         },
         body: JSON.stringify({ resetValue: 15 }),
       })
+
+      // If endpoint doesn't exist (404), that's okay for now
+      if (response.status === 404) {
+        console.warn("⚠️ Reset endpoint not implemented on backend yet")
+        return { success: false, message: "Endpoint not found" }
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
