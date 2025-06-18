@@ -36,6 +36,7 @@ export default function EcoBotDashboard() {
   const [totalReward, setTotalReward] = useState(15)
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
   const [isConnecting, setIsConnecting] = useState(true)
+  const [lastProcessedSession, setLastProcessedSession] = useState<number | null>(null)
 
   // Auto-connect and maintain connection
   useEffect(() => {
@@ -95,11 +96,31 @@ export default function EcoBotDashboard() {
 
         // Get bottle data
         const bottleData = await api.getBottleData()
-        setBottleHistory(bottleData.history || [])
+        const newHistory = bottleData.history || []
+        setBottleHistory(newHistory)
         setTotalBottles(bottleData.total || 0)
         setSessionsCompleted(bottleData.sessions || 0)
 
-        // Get reward data
+        // Check for new sessions and process rewards
+        if (newHistory.length > 0) {
+          const latestSession = newHistory[newHistory.length - 1]
+
+          // If there's a new session that hasn't been processed
+          if (latestSession.id !== lastProcessedSession && latestSession.status === "completed") {
+            console.log("🎁 Processing new bottle collection for rewards...")
+
+            try {
+              // Process the bottle collection and deduct rewards
+              await api.processBottleCollection(latestSession.bottles)
+              setLastProcessedSession(latestSession.id)
+              console.log(`✅ Processed ${latestSession.bottles} bottles, rewards deducted`)
+            } catch (error) {
+              console.error("❌ Failed to process bottle collection:", error)
+            }
+          }
+        }
+
+        // Get updated reward data
         const rewardData = await api.getRewardData()
         setTotalReward(Math.max(0, rewardData.totalReward || 0))
       } catch (error) {
@@ -111,7 +132,7 @@ export default function EcoBotDashboard() {
     pollData()
 
     return () => clearInterval(interval)
-  }, [])
+  }, [lastProcessedSession])
 
   const handleClearHistory = async () => {
     try {
@@ -119,6 +140,7 @@ export default function EcoBotDashboard() {
       setBottleHistory([])
       setTotalBottles(0)
       setSessionsCompleted(0)
+      setLastProcessedSession(null)
       console.log("History cleared")
     } catch (error) {
       console.error("Failed to clear history:", error)
@@ -144,6 +166,19 @@ export default function EcoBotDashboard() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  // Manual reward deduction for testing
+  const handleManualRewardDeduction = async () => {
+    try {
+      await api.updateRewardData({
+        action: "deduct",
+        amount: 1,
+      })
+      console.log("Manual reward deduction processed")
+    } catch (error) {
+      console.error("Failed to deduct reward:", error)
+    }
   }
 
   const getBinStatusColor = (status: string) => {
@@ -225,6 +260,13 @@ export default function EcoBotDashboard() {
           >
             <Download className="h-4 w-4 mr-2" />
             Export Data
+          </Button>
+          <Button
+            onClick={handleManualRewardDeduction}
+            variant="outline"
+            className="border-orange-400 text-orange-100 hover:bg-orange-700 px-6 py-3"
+          >
+            Test Reward Deduction
           </Button>
         </div>
       </div>
