@@ -2,11 +2,12 @@ const express = require("express")
 const cors = require("cors")
 
 const app = express()
-const PORT = 3001
+const PORT = 3000;
 
 // Middleware
 app.use(cors())
-app.use(express.json())
+app.use(express.json());
+app.use(express.static('public'));
 
 // Import and use routes
 try {
