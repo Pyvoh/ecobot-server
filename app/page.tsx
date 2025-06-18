@@ -116,10 +116,12 @@ export default function EcoBotDashboard() {
   const handleClearHistory = async () => {
     try {
       await api.clearBottleData()
+      await api.resetReward() // Reset reward on backend
       setBottleHistory([])
       setTotalBottles(0)
       setSessionsCompleted(0)
-      console.log("History cleared")
+      setTotalReward(15) // Reset reward to 15 on frontend
+      console.log("History cleared and reward reset to 15")
     } catch (error) {
       console.error("Failed to clear history:", error)
     }
