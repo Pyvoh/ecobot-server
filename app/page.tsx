@@ -115,15 +115,30 @@ export default function EcoBotDashboard() {
 
   const handleClearHistory = async () => {
     try {
+      console.log("🗑️ Clearing history and resetting reward...")
+
+      // Clear bottle data
       await api.clearBottleData()
-      await api.resetReward() // Reset reward on backend
+
+      // Try to reset reward on backend, but don't fail if endpoint doesn't exist
+      try {
+        await api.resetReward()
+        console.log("✅ Backend reward reset successful")
+      } catch (resetError) {
+        console.warn("⚠️ Backend reward reset failed, setting frontend only:", resetError)
+      }
+
+      // Always reset frontend state
       setBottleHistory([])
       setTotalBottles(0)
       setSessionsCompleted(0)
-      setTotalReward(15) // Reset reward to 15 on frontend
-      console.log("History cleared and reward reset to 15")
+      setTotalReward(15)
+
+      console.log("✅ History cleared and reward reset to 15")
     } catch (error) {
-      console.error("Failed to clear history:", error)
+      console.error("❌ Failed to clear history:", error)
+      // Even if clearing fails, try to reset the reward locally
+      setTotalReward(15)
     }
   }
 
