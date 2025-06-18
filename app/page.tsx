@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Trash2, Download, BarChart3, CheckCircle, AlertCircle, Clock } from "lucide-react"
+import { api } from "@/lib/api"
 
 interface BottleData {
   id: number
@@ -32,78 +33,54 @@ export default function EcoBotDashboard() {
   })
   const [bottleHistory, setBottleHistory] = useState<BottleData[]>([])
   const [totalBottles, setTotalBottles] = useState(0)
-  const [totalReward, setTotalReward] = useState(15) // Start with 15 rewards
+  const [totalReward, setTotalReward] = useState(15)
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
   const [isConnecting, setIsConnecting] = useState(true)
 
   // Auto-connect and maintain connection
   useEffect(() => {
-    // Auto-connect on page load
     const autoConnect = async () => {
       try {
         console.log("🤖 Auto-connecting to EcoBot...")
 
-        const response = await fetch("/api/bin-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "connect",
-            device_id: "ecobot_001",
-            status: "connected",
-            message: "Dashboard connected automatically",
-            timestamp: Date.now(),
-          }),
+        await api.updateBinStatus({
+          action: "connect",
+          device_id: "ecobot_001",
+          status: "connected",
+          message: "Dashboard connected automatically",
+          timestamp: Date.now(),
         })
 
-        if (response.ok) {
-          setConnected(true)
-          setIsConnecting(false)
-          console.log("✅ Auto-connected to EcoBot successfully!")
-        } else {
-          setIsConnecting(false)
-          console.log("❌ Auto-connection failed, will retry...")
-          // Retry connection every 10 seconds if failed
-          setTimeout(autoConnect, 10000)
-        }
+        setConnected(true)
+        setIsConnecting(false)
+        console.log("✅ Auto-connected to EcoBot successfully!")
       } catch (error) {
         console.error("Auto-connection error:", error)
         setIsConnecting(false)
-        // Retry connection every 10 seconds if error
         setTimeout(autoConnect, 10000)
       }
     }
 
-    // Start auto-connection immediately
     autoConnect()
 
     // Keep connection alive - ping every 30 seconds
     const keepAliveInterval = setInterval(async () => {
       try {
-        const response = await fetch("/api/bin-status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "ping",
-            device_id: "ecobot_001",
-            status: "connected",
-            message: "Keep-alive ping",
-            timestamp: Date.now(),
-          }),
+        await api.updateBinStatus({
+          action: "ping",
+          device_id: "ecobot_001",
+          status: "connected",
+          message: "Keep-alive ping",
+          timestamp: Date.now(),
         })
 
-        if (response.ok) {
-          setConnected(true)
-        } else {
-          setConnected(false)
-          console.log("⚠️ Connection lost, attempting to reconnect...")
-          autoConnect() // Try to reconnect
-        }
+        setConnected(true)
       } catch (error) {
         setConnected(false)
         console.log("⚠️ Keep-alive failed, attempting to reconnect...")
-        autoConnect() // Try to reconnect
+        autoConnect()
       }
-    }, 30000) // Every 30 seconds
+    }, 30000)
 
     return () => clearInterval(keepAliveInterval)
   }, [])
@@ -113,52 +90,36 @@ export default function EcoBotDashboard() {
     const pollData = async () => {
       try {
         // Check bin status
-        const binResponse = await fetch("/api/bin-status")
-        if (binResponse.ok) {
-          const binData = await binResponse.json()
-          setBinStatus(binData)
-        }
+        const binData = await api.getBinStatus()
+        setBinStatus(binData)
 
         // Get bottle data
-        const bottleResponse = await fetch("/api/bottle-data")
-        if (bottleResponse.ok) {
-          const bottleData = await bottleResponse.json()
-          setBottleHistory(bottleData.history || [])
-          setTotalBottles(bottleData.total || 0)
-          setSessionsCompleted(bottleData.sessions || 0)
-        }
+        const bottleData = await api.getBottleData()
+        setBottleHistory(bottleData.history || [])
+        setTotalBottles(bottleData.total || 0)
+        setSessionsCompleted(bottleData.sessions || 0)
 
         // Get reward data
-        const rewardResponse = await fetch("/api/reward-bottle")
-        if (rewardResponse.ok) {
-          const rewardData = await rewardResponse.json()
-          // Ensure totalReward doesn't go below 0
-          setTotalReward(Math.max(0, rewardData.totalReward || 0))
-        }
+        const rewardData = await api.getRewardData()
+        setTotalReward(Math.max(0, rewardData.totalReward || 0))
       } catch (error) {
         console.error("Error polling data:", error)
       }
     }
 
-    // Poll every 5 seconds
     const interval = setInterval(pollData, 5000)
-    pollData() // Initial poll
+    pollData()
 
     return () => clearInterval(interval)
   }, [])
 
   const handleClearHistory = async () => {
     try {
-      const response = await fetch("/api/bottle-data", {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        setBottleHistory([])
-        setTotalBottles(0)
-        setSessionsCompleted(0)
-        console.log("History cleared")
-      }
+      await api.clearBottleData()
+      setBottleHistory([])
+      setTotalBottles(0)
+      setSessionsCompleted(0)
+      console.log("History cleared")
     } catch (error) {
       console.error("Failed to clear history:", error)
     }
@@ -246,7 +207,7 @@ export default function EcoBotDashboard() {
         </div>
       </div>
 
-      {/* Action Buttons - Removed Connect Button */}
+      {/* Action Buttons */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex gap-4 justify-center">
           <Button
@@ -271,7 +232,7 @@ export default function EcoBotDashboard() {
       {/* Status Cards */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Bin Status */}
+          {/* Bin Status Card */}
           <Card className="bg-blue-800/50 backdrop-blur-sm border-blue-600/30">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -290,7 +251,7 @@ export default function EcoBotDashboard() {
                   <p className="text-sm text-blue-300">
                     Last updated:{" "}
                     {new Date(binStatus.timestamp).toLocaleString("en-US", {
-                      timeZone: "Asia/Manila", // UTC+8
+                      timeZone: "Asia/Manila",
                       year: "numeric",
                       month: "numeric",
                       day: "numeric",
@@ -305,7 +266,7 @@ export default function EcoBotDashboard() {
             </CardContent>
           </Card>
 
-          {/* Total Bottles */}
+          {/* Total Bottles Card */}
           <Card className="bg-blue-800/50 backdrop-blur-sm border-blue-600/30">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -326,7 +287,7 @@ export default function EcoBotDashboard() {
         </div>
       </div>
 
-      {/* Collection History */}
+      {/* Collection History Table */}
       <div className="max-w-7xl mx-auto">
         <Card className="bg-blue-800/50 backdrop-blur-sm border-blue-600/30">
           <CardHeader>
