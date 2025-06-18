@@ -79,4 +79,24 @@ export const api = {
       throw error
     }
   },
+
+  // Reset reward to initial value
+  resetReward: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reward-bottle/reset`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ resetValue: 15 }),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error("❌ Failed to reset reward:", error)
+      throw error
+    }
+  },
 }
