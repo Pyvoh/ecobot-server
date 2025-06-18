@@ -79,4 +79,44 @@ export const api = {
       throw error
     }
   },
+
+  // NEW: Update reward balance (deduct rewards)
+  updateRewardData: async (data: { action: string; amount: number; bottles?: number }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/reward-bottle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error("❌ Failed to update reward data:", error)
+      throw error
+    }
+  },
+
+  // NEW: Process bottle collection with reward deduction
+  processBottleCollection: async (bottles: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/process-collection`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bottles }),
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error("❌ Failed to process bottle collection:", error)
+      throw error
+    }
+  },
 }
