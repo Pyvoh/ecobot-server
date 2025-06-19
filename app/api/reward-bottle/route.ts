@@ -14,6 +14,24 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    // Handle reset action
+    if (body.action === "reset") {
+      const resetValue = body.resetValue || 15
+      rewardData = {
+        totalReward: resetValue,
+        rewardHistory: [],
+      }
+
+      console.log(`🔄 Reward reset to ${resetValue}`)
+
+      return NextResponse.json({
+        success: true,
+        totalReward: rewardData.totalReward,
+        action: "reset",
+        message: `Reward reset to ${resetValue}`,
+      })
+    }
+
     if (body.action === "decrease") {
       // Decrease rewards (for completed sessions)
       const amount = body.amount || 1
@@ -85,11 +103,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  // Reset rewards
+  // Reset rewards to 0 (this is different from the reset action above)
   rewardData = {
     totalReward: 0,
     rewardHistory: [],
   }
 
-  return NextResponse.json({ success: true, message: "Rewards reset" })
+  return NextResponse.json({ success: true, message: "Rewards reset to 0" })
 }
