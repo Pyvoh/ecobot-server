@@ -14,6 +14,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log("📦 Received bottle data:", body)
 
     // Handle different actions
     if (body.action === "decrease") {
@@ -44,28 +45,38 @@ export async function POST(request: NextRequest) {
       bottleData.total += bottleCount
       bottleData.sessions += 1
 
-      console.log("New bottle collection recorded:", newSession)
+      console.log("✅ New bottle collection recorded:", newSession)
 
-      // Decrease the reward by 1 for this session (regardless of bottle count)
+      // Decrease the reward by 1 for this session
       try {
-        const rewardResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "decrease",
-              amount: 1, // Always decrease by 1 per session
-              reason: `Session ${newSession.id} completed - ${bottleCount} bottles collected`,
-            }),
+        console.log("🎯 Attempting to decrease reward...")
+
+        // Use the correct API URL - same as your frontend uses
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+        const rewardUrl = `${API_BASE_URL}/api/reward-bottle`
+
+        console.log("🔗 Calling reward API at:", rewardUrl)
+
+        const rewardResponse = await fetch(rewardUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        )
+          body: JSON.stringify({
+            action: "decrease",
+            amount: 1, // Always decrease by 1 per session
+            reason: `Session ${newSession.id} completed - ${bottleCount} bottles collected`,
+          }),
+        })
+
+        console.log("📡 Reward API response status:", rewardResponse.status)
 
         if (rewardResponse.ok) {
           const rewardResult = await rewardResponse.json()
           console.log("✅ Reward decreased successfully:", rewardResult)
         } else {
-          console.error("❌ Failed to decrease reward:", rewardResponse.status)
+          const errorText = await rewardResponse.text()
+          console.error("❌ Failed to decrease reward:", rewardResponse.status, errorText)
         }
       } catch (rewardError) {
         console.error("❌ Error calling reward API:", rewardError)
@@ -75,7 +86,7 @@ export async function POST(request: NextRequest) {
         success: true,
         session: newSession,
         total: bottleData.total,
-        message: `Collected ${bottleCount} bottles, reward decreased by 1`,
+        message: `Collected ${bottleCount} bottles, reward should decrease by 1`,
       })
     } else {
       // Regular bottle collection (backward compatibility)
@@ -103,26 +114,37 @@ export async function POST(request: NextRequest) {
       bottleData.total += newSession.bottles
       bottleData.sessions += 1
 
-      console.log("New bottle collection recorded:", newSession)
+      console.log("✅ New bottle collection recorded:", newSession)
 
       // Decrease the reward by 1 for this session
       try {
-        const rewardResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "decrease",
-              amount: 1,
-              reason: `Session ${newSession.id} completed`,
-            }),
+        console.log("🎯 Attempting to decrease reward...")
+
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+        const rewardUrl = `${API_BASE_URL}/api/reward-bottle`
+
+        console.log("🔗 Calling reward API at:", rewardUrl)
+
+        const rewardResponse = await fetch(rewardUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        )
+          body: JSON.stringify({
+            action: "decrease",
+            amount: 1,
+            reason: `Session ${newSession.id} completed`,
+          }),
+        })
+
+        console.log("📡 Reward API response status:", rewardResponse.status)
 
         if (rewardResponse.ok) {
           const rewardResult = await rewardResponse.json()
           console.log("✅ Reward decreased successfully:", rewardResult)
+        } else {
+          const errorText = await rewardResponse.text()
+          console.error("❌ Failed to decrease reward:", rewardResponse.status, errorText)
         }
       } catch (rewardError) {
         console.error("❌ Error calling reward API:", rewardError)
@@ -135,7 +157,7 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error("Error processing bottle data:", error)
+    console.error("❌ Error processing bottle data:", error)
     return NextResponse.json({ error: "Failed to process bottle data" }, { status: 500 })
   }
 }
