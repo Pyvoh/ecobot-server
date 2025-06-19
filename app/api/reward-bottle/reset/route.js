@@ -1,36 +1,41 @@
-// Create this new file: app/api/reward-bottle/reset/route.js
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function POST(request) {
+// Import the same rewardData from the parent route
+// Since we can't directly import it, we'll make an API call to the main route to reset it
+
+export async function POST(request: NextRequest) {
   try {
-    // Parse the request body
-    const body = await request.json();
-    const resetValue = body.resetValue || 15;
+    const body = await request.json()
+    const resetValue = body.resetValue || 15
 
-    // Here you would reset your reward data in your database/storage
-    // For example, if you're using a simple variable or file storage:
-    
-    // Reset the reward to 15 (adjust this based on how you store your data)
-    // If you're using a database, update the record
-    // If you're using a file, write the new value
-    // If you're using a global variable, reset it
-    
-    console.log(`🔄 Resetting reward to ${resetValue}`);
-    
-    // Example response - adjust based on your data structure
-    const response = {
+    console.log(`🔄 Resetting reward to ${resetValue}`)
+
+    // Call the DELETE endpoint to reset, then set to our desired value
+    const deleteResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`,
+      {
+        method: "DELETE",
+      },
+    ).catch(() => null)
+
+    // Now add the reset value
+    const addResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: resetValue,
+        reason: "History cleared - reward reset",
+      }),
+    }).catch(() => null)
+
+    return NextResponse.json({
       success: true,
       totalReward: resetValue,
       message: `Reward reset to ${resetValue}`,
-      timestamp: Date.now()
-    };
-
-    return Response.json(response);
-    
+      timestamp: Date.now(),
+    })
   } catch (error) {
-    console.error('❌ Error resetting reward:', error);
-    return Response.json(
-      { success: false, error: 'Failed to reset reward' }, 
-      { status: 500 }
-    );
+    console.error("❌ Error resetting reward:", error)
+    return NextResponse.json({ success: false, error: "Failed to reset reward" }, { status: 500 })
   }
 }
