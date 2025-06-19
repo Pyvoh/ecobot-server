@@ -7,6 +7,7 @@ let rewardData = {
 }
 
 export async function GET() {
+  console.log("📊 Getting reward data:", rewardData.totalReward)
   return NextResponse.json(rewardData)
 }
 
@@ -35,6 +36,8 @@ export async function POST(request: NextRequest) {
     if (body.action === "decrease") {
       // Decrease rewards (for completed sessions)
       const amount = body.amount || 1
+      const previousReward = rewardData.totalReward
+
       const newReward = {
         id: rewardData.rewardHistory.length + 1,
         amount: -amount, // Negative amount for decrease
@@ -56,12 +59,13 @@ export async function POST(request: NextRequest) {
       rewardData.rewardHistory.unshift(newReward)
       rewardData.totalReward = Math.max(0, rewardData.totalReward - amount) // Don't go below 0
 
-      console.log("Reward decreased:", newReward, "New total:", rewardData.totalReward)
+      console.log(`💰 Reward decreased: ${previousReward} → ${rewardData.totalReward} (decreased by ${amount})`)
 
       return NextResponse.json({
         success: true,
         reward: newReward,
         totalReward: rewardData.totalReward,
+        previousReward: previousReward,
         action: "decreased",
       })
     } else {
@@ -108,6 +112,8 @@ export async function DELETE() {
     totalReward: 0,
     rewardHistory: [],
   }
+
+  console.log("🗑️ Rewards reset to 0")
 
   return NextResponse.json({ success: true, message: "Rewards reset to 0" })
 }
