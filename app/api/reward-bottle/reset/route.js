@@ -1,41 +1,31 @@
-import { type NextRequest, NextResponse } from "next/server"
+// Create this new file: app/api/reward-bottle/reset/route.js
 
-// Import the same rewardData from the parent route
-// Since we can't directly import it, we'll make an API call to the main route to reset it
+// Import the same reward data (you might need to move this to a separate file)
+// For now, we'll use a simple approach
+const rewardData = {
+  totalReward: 15,
+  lastUpdated: Date.now(),
+}
 
-export async function POST(request: NextRequest) {
+export async function POST(request) {
   try {
     const body = await request.json()
     const resetValue = body.resetValue || 15
 
-    console.log(`🔄 Resetting reward to ${resetValue}`)
+    // Reset the reward data
+    rewardData.totalReward = resetValue
+    rewardData.lastUpdated = Date.now()
 
-    // Call the DELETE endpoint to reset, then set to our desired value
-    const deleteResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`,
-      {
-        method: "DELETE",
-      },
-    ).catch(() => null)
+    console.log(`🔄 Reward reset to ${resetValue}`)
 
-    // Now add the reset value
-    const addResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/reward-bottle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: resetValue,
-        reason: "History cleared - reward reset",
-      }),
-    }).catch(() => null)
-
-    return NextResponse.json({
+    return Response.json({
       success: true,
-      totalReward: resetValue,
+      totalReward: rewardData.totalReward,
       message: `Reward reset to ${resetValue}`,
-      timestamp: Date.now(),
+      lastUpdated: rewardData.lastUpdated,
     })
   } catch (error) {
     console.error("❌ Error resetting reward:", error)
-    return NextResponse.json({ success: false, error: "Failed to reset reward" }, { status: 500 })
+    return Response.json({ success: false, error: "Failed to reset reward" }, { status: 500 })
   }
 }
