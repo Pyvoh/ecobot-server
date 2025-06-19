@@ -7,13 +7,14 @@ let rewardData = {
 }
 
 export async function GET() {
-  console.log("📊 Getting reward data:", rewardData.totalReward)
+  console.log("📊 GET reward data - Current total:", rewardData.totalReward)
   return NextResponse.json(rewardData)
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    console.log("📥 POST reward data received:", body)
 
     // Handle reset action
     if (body.action === "reset") {
@@ -38,6 +39,8 @@ export async function POST(request: NextRequest) {
       const amount = body.amount || 1
       const previousReward = rewardData.totalReward
 
+      console.log(`💰 BEFORE decrease: ${previousReward}, decreasing by: ${amount}`)
+
       const newReward = {
         id: rewardData.rewardHistory.length + 1,
         amount: -amount, // Negative amount for decrease
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
       rewardData.rewardHistory.unshift(newReward)
       rewardData.totalReward = Math.max(0, rewardData.totalReward - amount) // Don't go below 0
 
-      console.log(`💰 Reward decreased: ${previousReward} → ${rewardData.totalReward} (decreased by ${amount})`)
+      console.log(`💰 AFTER decrease: ${rewardData.totalReward} (was ${previousReward}, decreased by ${amount})`)
 
       return NextResponse.json({
         success: true,
@@ -67,6 +70,7 @@ export async function POST(request: NextRequest) {
         totalReward: rewardData.totalReward,
         previousReward: previousReward,
         action: "decreased",
+        message: `Reward decreased from ${previousReward} to ${rewardData.totalReward}`,
       })
     } else {
       // Add rewards (for manual additions or bonuses)
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest) {
       rewardData.rewardHistory.unshift(newReward)
       rewardData.totalReward += newReward.amount
 
-      console.log("Reward added:", newReward)
+      console.log("✅ Reward added:", newReward, "New total:", rewardData.totalReward)
 
       return NextResponse.json({
         success: true,
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error("Error processing reward:", error)
+    console.error("❌ Error processing reward:", error)
     return NextResponse.json({ error: "Failed to process reward" }, { status: 500 })
   }
 }
