@@ -80,24 +80,34 @@ export const api = {
     }
   },
 
-  // Reset reward to initial value using the main route
+  // Reset reward to 15
   resetReward: async () => {
     try {
+      console.log("🔄 Frontend: Calling reset reward API...")
+
+      const requestBody = {
+        action: "reset",
+        resetValue: 15,
+      }
+
+      console.log("📤 Frontend: Sending reset request:", requestBody)
+
       const response = await fetch(`${API_BASE_URL}/api/reward-bottle`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          action: "reset",
-          resetValue: 15,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await response.json()
+
+      const result = await response.json()
+      console.log("✅ Frontend: Reset response:", result)
+
+      return result
     } catch (error) {
       console.error("❌ Failed to reset reward:", error)
       throw error
