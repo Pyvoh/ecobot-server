@@ -6,20 +6,8 @@ let rewardData = {
   rewardHistory: [], // Start empty
 }
 
-// Add a simple function to force reset the global variable
-function forceResetReward(value = 15) {
-  console.log(`🔧 FORCE RESET: Setting global rewardData to ${value}`)
-  rewardData = {
-    totalReward: value,
-    rewardHistory: [],
-  }
-  console.log(`🔧 FORCE RESET: Global rewardData is now:`, rewardData)
-  return rewardData
-}
-
 export async function GET() {
   console.log("📊 GET reward data - Current total:", rewardData.totalReward)
-  console.log("📊 GET reward data - Full object:", rewardData)
   return NextResponse.json(rewardData)
 }
 
@@ -27,30 +15,33 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     console.log("📥 POST reward data received:", JSON.stringify(body, null, 2))
-    console.log("📥 POST current rewardData before processing:", rewardData)
+    console.log("📥 Current rewardData.totalReward BEFORE processing:", rewardData.totalReward)
 
-    // Handle reset action FIRST
+    // Handle reset action FIRST - FIXED VERSION
     if (body.action === "reset") {
       const resetValue = body.resetValue || 15
 
-      console.log(`🔄 RESET ACTION: Setting reward to ${resetValue}`)
-      console.log(`🔄 RESET ACTION: rewardData BEFORE reset:`, rewardData)
+      console.log(`🔄 RESET ACTION: Setting reward to EXACTLY ${resetValue}`)
+      console.log(`🔄 BEFORE reset - totalReward was: ${rewardData.totalReward}`)
 
-      // Force reset the global variable
-      rewardData = forceResetReward(resetValue)
+      // COMPLETELY REPLACE the rewardData object
+      rewardData = {
+        totalReward: resetValue, // Set to EXACTLY the reset value
+        rewardHistory: [], // Clear history
+      }
 
-      console.log(`🔄 RESET ACTION: rewardData AFTER reset:`, rewardData)
-      console.log(`✅ Reward successfully reset to ${rewardData.totalReward}`)
+      console.log(`🔄 AFTER reset - totalReward is now: ${rewardData.totalReward}`)
+      console.log(`✅ Reward successfully reset to EXACTLY ${rewardData.totalReward}`)
 
       return NextResponse.json({
         success: true,
         totalReward: rewardData.totalReward,
         action: "reset",
-        message: `Reward reset to ${resetValue}`,
+        message: `Reward reset to exactly ${resetValue}`,
         debug: {
-          beforeReset: "checked",
-          afterReset: rewardData.totalReward,
-          globalVariable: rewardData,
+          requestedValue: resetValue,
+          actualValue: rewardData.totalReward,
+          isCorrect: rewardData.totalReward === resetValue,
         },
       })
     }
@@ -97,9 +88,14 @@ export async function POST(request: NextRequest) {
 
     // Handle add/increase action
     else if (body.action === "increase" || body.action === "add") {
+      const amount = body.amount || 1
+      const previousReward = rewardData.totalReward
+
+      console.log(`➕ ADD ACTION: ${previousReward} + ${amount}`)
+
       const newReward = {
         id: rewardData.rewardHistory.length + 1,
-        amount: body.amount || 1,
+        amount: amount,
         timestamp:
           body.timestamp ||
           new Date().toLocaleString("en-US", {
@@ -116,9 +112,9 @@ export async function POST(request: NextRequest) {
       }
 
       rewardData.rewardHistory.unshift(newReward)
-      rewardData.totalReward += newReward.amount
+      rewardData.totalReward += amount
 
-      console.log("✅ Reward added:", newReward, "New total:", rewardData.totalReward)
+      console.log(`✅ Reward increased from ${previousReward} to ${rewardData.totalReward}`)
 
       return NextResponse.json({
         success: true,
@@ -131,11 +127,13 @@ export async function POST(request: NextRequest) {
     // If no valid action is provided
     else {
       console.error("❌ Invalid action provided:", body.action)
+      console.error("❌ Available actions: reset, decrease, increase, add")
       return NextResponse.json(
         {
           success: false,
           error: "Invalid action. Use 'reset', 'decrease', 'increase', or 'add'",
           currentReward: rewardData.totalReward,
+          receivedAction: body.action,
         },
         { status: 400 },
       )
@@ -153,9 +151,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  // Reset rewards to 0 (this is different from the reset action above)
   console.log("🗑️ DELETE: Resetting to 0")
-  rewardData = forceResetReward(0)
+
+  rewardData = {
+    totalReward: 0,
+    rewardHistory: [],
+  }
 
   console.log("🗑️ Rewards reset to 0 via DELETE")
 
