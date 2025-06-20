@@ -14,17 +14,20 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log("📥 POST reward data received:", body)
+    console.log("📥 POST reward data received:", JSON.stringify(body, null, 2))
 
-    // Handle reset action
+    // Handle reset action FIRST
     if (body.action === "reset") {
       const resetValue = body.resetValue || 15
+
+      console.log(`🔄 RESET ACTION: Setting reward to ${resetValue}`)
+
       rewardData = {
         totalReward: resetValue,
         rewardHistory: [],
       }
 
-      console.log(`🔄 Reward reset to ${resetValue}`)
+      console.log(`✅ Reward successfully reset to ${rewardData.totalReward}`)
 
       return NextResponse.json({
         success: true,
@@ -34,12 +37,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (body.action === "decrease") {
-      // Decrease rewards (for completed sessions)
+    // Handle decrease action
+    else if (body.action === "decrease") {
       const amount = body.amount || 1
       const previousReward = rewardData.totalReward
 
-      console.log(`💰 BEFORE decrease: ${previousReward}, decreasing by: ${amount}`)
+      console.log(`💰 DECREASE ACTION: ${previousReward} - ${amount}`)
 
       const newReward = {
         id: rewardData.rewardHistory.length + 1,
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
         timestamp:
           body.timestamp ||
           new Date().toLocaleString("en-US", {
-            timeZone: "Asia/Manila", // UTC+8
+            timeZone: "Asia/Manila",
             year: "numeric",
             month: "numeric",
             day: "numeric",
@@ -60,9 +63,9 @@ export async function POST(request: NextRequest) {
       }
 
       rewardData.rewardHistory.unshift(newReward)
-      rewardData.totalReward = Math.max(0, rewardData.totalReward - amount) // Don't go below 0
+      rewardData.totalReward = Math.max(0, rewardData.totalReward - amount)
 
-      console.log(`💰 AFTER decrease: ${rewardData.totalReward} (was ${previousReward}, decreased by ${amount})`)
+      console.log(`✅ Reward decreased from ${previousReward} to ${rewardData.totalReward}`)
 
       return NextResponse.json({
         success: true,
@@ -72,15 +75,17 @@ export async function POST(request: NextRequest) {
         action: "decreased",
         message: `Reward decreased from ${previousReward} to ${rewardData.totalReward}`,
       })
-    } else {
-      // Add rewards (for manual additions or bonuses)
+    }
+
+    // Handle add/increase action
+    else if (body.action === "increase" || body.action === "add") {
       const newReward = {
         id: rewardData.rewardHistory.length + 1,
         amount: body.amount || 1,
         timestamp:
           body.timestamp ||
           new Date().toLocaleString("en-US", {
-            timeZone: "Asia/Manila", // UTC+8
+            timeZone: "Asia/Manila",
             year: "numeric",
             month: "numeric",
             day: "numeric",
@@ -104,6 +109,18 @@ export async function POST(request: NextRequest) {
         action: "increased",
       })
     }
+
+    // If no valid action is provided
+    else {
+      console.error("❌ Invalid action provided:", body.action)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid action. Use 'reset', 'decrease', 'increase', or 'add'",
+        },
+        { status: 400 },
+      )
+    }
   } catch (error) {
     console.error("❌ Error processing reward:", error)
     return NextResponse.json({ error: "Failed to process reward" }, { status: 500 })
@@ -117,7 +134,7 @@ export async function DELETE() {
     rewardHistory: [],
   }
 
-  console.log("🗑️ Rewards reset to 0")
+  console.log("🗑️ Rewards reset to 0 via DELETE")
 
   return NextResponse.json({ success: true, message: "Rewards reset to 0" })
 }
