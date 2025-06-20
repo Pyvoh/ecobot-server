@@ -73,7 +73,9 @@ export const api = {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await response.json()
+      const data = await response.json()
+      console.log("📊 API: Fetched reward data:", data)
+      return data
     } catch (error) {
       console.error("❌ Failed to fetch reward data:", error)
       throw error
@@ -83,7 +85,7 @@ export const api = {
   // Reset reward to 15
   resetReward: async () => {
     try {
-      console.log("🔄 Frontend: Calling reset reward API...")
+      console.log("🔄 Frontend: Starting reset reward process...")
 
       const requestBody = {
         action: "reset",
@@ -91,6 +93,7 @@ export const api = {
       }
 
       console.log("📤 Frontend: Sending reset request:", requestBody)
+      console.log("🔗 Frontend: API URL:", `${API_BASE_URL}/api/reward-bottle`)
 
       const response = await fetch(`${API_BASE_URL}/api/reward-bottle`, {
         method: "POST",
@@ -100,12 +103,26 @@ export const api = {
         body: JSON.stringify(requestBody),
       })
 
+      console.log("📡 Frontend: Reset response status:", response.status)
+
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ Frontend: Reset failed:", response.status, errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const result = await response.json()
-      console.log("✅ Frontend: Reset response:", result)
+      console.log("✅ Frontend: Reset successful:", result)
+
+      // Verify the reset worked by fetching the data again
+      setTimeout(async () => {
+        try {
+          const verifyData = await api.getRewardData()
+          console.log("🔍 Frontend: Verification - reward after reset:", verifyData.totalReward)
+        } catch (verifyError) {
+          console.error("❌ Frontend: Failed to verify reset:", verifyError)
+        }
+      }, 500)
 
       return result
     } catch (error) {
