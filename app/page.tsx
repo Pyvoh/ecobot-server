@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Trash2, Download, BarChart3, CheckCircle, AlertCircle, Clock, TestTube } from "lucide-react"
+import { Trash2, Download, BarChart3, CheckCircle, AlertCircle, Clock } from "lucide-react"
 import { api } from "@/lib/api"
 
 interface BottleData {
@@ -37,7 +37,6 @@ export default function EcoBotDashboard() {
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
   const [isConnecting, setIsConnecting] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
-  const [testResult, setTestResult] = useState<string>("")
 
   // Use ref to control polling
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -129,28 +128,6 @@ export default function EcoBotDashboard() {
       }
     }
   }, [isClearing])
-
-  // Test function to debug the reset
-  const testReset = async () => {
-    try {
-      setTestResult("Testing...")
-      console.log("🧪 TESTING: Current reward before reset:", totalReward)
-
-      // Test the reset API directly
-      const resetResult = await api.resetReward()
-      console.log("🧪 TESTING: Reset API result:", resetResult)
-
-      // Wait a moment and check what the backend actually has
-      setTimeout(async () => {
-        const checkResult = await api.getRewardData()
-        console.log("🧪 TESTING: Backend reward after reset:", checkResult)
-        setTestResult(`Reset API returned: ${resetResult.totalReward}, Backend has: ${checkResult.totalReward}`)
-      }, 1000)
-    } catch (error) {
-      console.error("🧪 TESTING: Reset test failed:", error)
-      setTestResult(`Reset test failed: ${error.message}`)
-    }
-  }
 
   const handleClearHistory = async () => {
     try {
@@ -306,20 +283,7 @@ export default function EcoBotDashboard() {
             <Download className="h-4 w-4 mr-2" />
             Export Data
           </Button>
-          <Button
-            onClick={testReset}
-            variant="outline"
-            className="border-yellow-400 text-yellow-100 hover:bg-yellow-700 px-6 py-3"
-          >
-            <TestTube className="h-4 w-4 mr-2" />
-            Test Reset
-          </Button>
         </div>
-        {testResult && (
-          <div className="mt-4 p-4 bg-yellow-900/50 rounded-lg text-center text-yellow-200">
-            <strong>Test Result:</strong> {testResult}
-          </div>
-        )}
       </div>
 
       {/* Status Cards */}
