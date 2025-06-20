@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Trash2, Download, BarChart3, CheckCircle, AlertCircle, Clock } from "lucide-react"
@@ -36,6 +36,10 @@ export default function EcoBotDashboard() {
   const [totalReward, setTotalReward] = useState(15)
   const [sessionsCompleted, setSessionsCompleted] = useState(0)
   const [isConnecting, setIsConnecting] = useState(true)
+  const [isClearing, setIsClearing] = useState(false)
+
+  // Use ref to control polling
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Auto-connect and maintain connection
   useEffect(() => {
@@ -85,60 +89,83 @@ export default function EcoBotDashboard() {
     return () => clearInterval(keepAliveInterval)
   }, [])
 
-  // Poll for data updates
-  useEffect(() => {
-    const pollData = async () => {
-      try {
-        // Check bin status
-        const binData = await api.getBinStatus()
-        setBinStatus(binData)
-
-        // Get bottle data
-        const bottleData = await api.getBottleData()
-        setBottleHistory(bottleData.history || [])
-        setTotalBottles(bottleData.total || 0)
-        setSessionsCompleted(bottleData.sessions || 0)
-
-        // Get reward data
-        const rewardData = await api.getRewardData()
-        setTotalReward(Math.max(0, rewardData.totalReward || 0))
-      } catch (error) {
-        console.error("Error polling data:", error)
-      }
+  // Separate polling function
+  const pollData = async () => {
+    if (isClearing) {
+      console.log("⏸️ Skipping polling - clearing in progress")
+      return
     }
 
-    const interval = setInterval(pollData, 5000)
-    pollData()
+    try {
+      // Check bin status
+      const binData = await api.getBinStatus()
+      setBinStatus(binData)
 
-    return () => clearInterval(interval)
-  }, [])
+      // Get bottle data
+      const bottleData = await api.getBottleData()
+      setBottleHistory(bottleData.history || [])
+      setTotalBottles(bottleData.total || 0)
+      setSessionsCompleted(bottleData.sessions || 0)
+
+      // Get reward data
+      const rewardData = await api.getRewardData()
+      console.log("📊 Polling - received reward data:", rewardData)
+      setTotalReward(Math.max(0, rewardData.totalReward || 0))
+    } catch (error) {
+      console.error("Error polling data:", error)
+    }
+  }
+
+  // Poll for data updates
+  useEffect(() => {
+    // Start polling
+    pollingIntervalRef.current = setInterval(pollData, 5000)
+    pollData() // Initial poll
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [isClearing])
 
   const handleClearHistory = async () => {
     try {
-      console.log("🗑️ Clearing history and resetting reward...")
+      setIsClearing(true)
+      console.log("🗑️ Starting clear history process...")
 
-      // Clear bottle data
-      await api.clearBottleData()
-
-      // Try to reset reward on backend, but don't fail if endpoint doesn't exist
-      try {
-        await api.resetReward()
-        console.log("✅ Backend reward reset successful")
-      } catch (resetError) {
-        console.warn("⚠️ Backend reward reset failed, setting frontend only:", resetError)
+      // Stop polling temporarily
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        console.log("⏸️ Polling stopped")
       }
 
-      // Always reset frontend state
+      // Clear bottle data first
+      console.log("🗑️ Clearing bottle data...")
+      await api.clearBottleData()
+
+      // Reset reward to 15
+      console.log("🔄 Resetting reward to 15...")
+      const resetResult = await api.resetReward()
+      console.log("✅ Reset result:", resetResult)
+
+      // Update frontend state immediately
       setBottleHistory([])
       setTotalBottles(0)
       setSessionsCompleted(0)
       setTotalReward(15)
 
-      console.log("✅ History cleared and reward reset to 15")
+      console.log("✅ Frontend state updated to 15")
+
+      // Wait a moment before resuming polling
+      setTimeout(() => {
+        console.log("▶️ Resuming polling...")
+        setIsClearing(false)
+      }, 2000)
     } catch (error) {
       console.error("❌ Failed to clear history:", error)
-      // Even if clearing fails, try to reset the reward locally
-      setTotalReward(15)
+      setTotalReward(15) // Set to 15 even if API fails
+      setIsClearing(false)
     }
   }
 
@@ -231,9 +258,10 @@ export default function EcoBotDashboard() {
             onClick={handleClearHistory}
             variant="outline"
             className="border-blue-400 text-blue-100 hover:bg-blue-700 px-6 py-3"
+            disabled={isClearing}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Clear History
+            {isClearing ? "Clearing..." : "Clear History"}
           </Button>
           <Button
             onClick={handleExportData}
@@ -315,7 +343,10 @@ export default function EcoBotDashboard() {
               </CardTitle>
               <div className="text-right">
                 <div className="text-sm text-blue-300">REWARD STATUS:</div>
-                <div className="text-2xl font-bold text-white">{totalReward}</div>
+                <div className="text-2xl font-bold text-white">
+                  {totalReward}
+                  {isClearing && <span className="text-sm text-yellow-400 ml-2">(Resetting...)</span>}
+                </div>
               </div>
             </div>
           </CardHeader>
